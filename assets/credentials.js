@@ -1,0 +1,1 @@
+module.exports = { dbName: "aprApp", password: 'work%401234' }
