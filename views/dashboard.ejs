@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>ToDo App</h1>
+    <div style="display: flex;justify-content:center;">
+        <form action="/logout" method="post">
+            <button type="submit">logout</button>
+        </form>
+    </div>
+    <form action="/create-item" method="post">
+        <div><label for="">TotodoDo</label></div>
+        <div><input type="text" name="todo" id="todo"></div>
+        <div><button type="submit">Add todo</button></div>
+    </form>
+
+    <ul>
+        <li>
+            <span class="item-text">
+                <%= todos[0].todo %>
+            </span>
+            <div style="display: flex;flex-direction: row;align-items: center">
+                <button
+                    style="padding: 5px;color: #fff;background-color: green;margin: 5px;cursor: pointer;">edit</button>
+                <button
+                    style="padding: 5px;color: #fff;background-color: red;margin: 5px;cursor: pointer;">delete</button>
+            </div>
+        </li>
+        <li>
+            <span class="item-text">
+                <%= todos[1].todo %>
+            </span>
+            <div style="display: flex;flex-direction: row;align-items: center">
+                <button
+                    style="padding: 5px;color: #fff;background-color: green;margin: 5px;cursor: pointer;">edit</button>
+                <button
+                    style="padding: 5px;color: #fff;background-color: red;margin: 5px;cursor: pointer;">delete</button>
+            </div>
+        </li>
+    </ul>
+</body>
+
+</html>

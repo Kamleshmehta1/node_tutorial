@@ -15,6 +15,7 @@ const dataBase = require('./private-constants')
 // import userModels
 
 const UserModel = require('./model/UserModel')
+const TodoModel = require('./model/TodoModel')
 
 
 const app = express()
@@ -40,9 +41,10 @@ const dataBaseSession = new mongoDbSession({
 app.use(
     session({
         secret: "Our Secret Key",
-        resave: true,
-        saveUninitialized: true,
-        store: dataBaseSession
+        resave: false,
+        saveUninitialized: false,
+        store: dataBaseSession,
+        unset: 'destroy'
     })
 );
 app.use(express.json())
@@ -86,7 +88,8 @@ app.post('/login', async (req, resp) => {
             })
         }
 
-        const isMatch = bcrypt.compare(password, user.password)
+        const isMatch = await bcrypt.compare(password, user.password)
+
 
         if (!isMatch) {
             return resp.send({
@@ -96,7 +99,6 @@ app.post('/login', async (req, resp) => {
             })
         }
 
-        console.log(req.session)
 
         req.session.isAuth = true;
         req.session.user = { email: user.email, userName: user.userName }
@@ -124,11 +126,27 @@ app.post('/login', async (req, resp) => {
 app.get('/home', (req, resp) => {
 
     if (req.session.isAuth) {
-        return resp.send('Welcome to the home page')
+        return resp.render('home')
     } else {
         return resp.send('Invalid session')
     }
 })
+
+app.post('/logout', (req, resp) => {
+    req.session.destroy((err) => {
+        if (err) throw err
+        resp.redirect('/login');
+    })
+})
+app.post('/logout_from_all', async (req, resp) => {
+
+    const store = req.sessionStore.destroy({ email: req.session.user.email })
+
+    console.log(store)
+    resp.send('hello')
+})
+
+
 
 app.post('/register', async (req, resp) => {
     const { name, email, password, userName } = req.body
@@ -189,6 +207,56 @@ app.post('/register', async (req, resp) => {
         })
     }
 
+})
+
+// todo app api's
+
+function isAuth(req, resp, next) {
+    if (req.session.isAuth) next()
+    else resp.redirect('/login')
+}
+
+app.get('/dashboard', isAuth, async (req, resp) => {
+
+    let todos = []
+    try {
+        todos = await TodoModel.find()
+
+        console.log('todos', todos[0].todo)
+    } catch (err) {
+        return resp.send({
+            status: 400,
+            message: "error",
+        })
+    }
+
+    return resp.render('dashboard', { todos: todos })
+})
+
+app.post('/create-item', isAuth, async (req, resp) => {
+
+    const { todo } = req.body
+
+    if (todo.length > 100) {
+        return resp.send({ status: 400, message: 'todo too long allowed character length is 100', data: req.body.todo })
+    }
+
+    const user = new TodoModel({ todo, userName: req.session.user.userName })
+    try {
+        const todoDb = await user.save();
+
+        return resp.send({
+            status: 200,
+            message: "item added successfully",
+            data: todoDb
+        })
+    } catch (error) {
+        return resp.send({
+            status: 400,
+            message: "error",
+            data: error
+        })
+    }
 })
 
 app.listen(PORT, () => {
