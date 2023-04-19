@@ -1,42 +1,42 @@
 //import NPM modules
 
-const express = require('express')
-const bcrypt = require('bcrypt')
-const mongoose = require('mongoose')
-const validator = require('validator')
-const session = require('express-session')
+const express = require('express');
+const bcrypt = require('bcrypt');
+const mongoose = require('mongoose');
+const validator = require('validator');
+const session = require('express-session');
 const mongoDbSession = require('connect-mongodb-session')(session);
 
 // import utils
 
-const { cleanUpAndValidate } = require('./utils/AuthUtils')
-const dataBase = require('./private-constants')
+const { cleanUpAndValidate } = require('./utils/AuthUtils');
+const dataBase = require('./private-constants');
 
 // import userModels
 
-const UserModel = require('./model/UserModel')
-const TodoModel = require('./model/TodoModel')
+const UserModel = require('./model/UserModel');
+const TodoModel = require('./model/TodoModel');
 
 
-const app = express()
+const app = express();
 
 
 
-const PORT = 4000
+const PORT = 4000;
 
 
 mongoose.connect(dataBase.mongoURI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 }).then((resp) => {
-    console.log('connected to database')
-})
+    console.log('connected to database');
+});
 
 
 const dataBaseSession = new mongoDbSession({
     uri: dataBase.mongoURI,
     collection: 'mySession'
-})
+});
 
 app.use(
     session({
@@ -47,36 +47,37 @@ app.use(
         unset: 'destroy'
     })
 );
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
 
 
 
-app.set('view engine', 'ejs')
+app.set('view engine', 'ejs');
 
 app.get('/', (req, resp) => {
-    resp.send('Welcome to the welcome page!')
-})
+    resp.send('Welcome to the welcome page!');
+});
 app.get('/login', (req, resp) => {
-    resp.render('login')
-})
+    resp.render('login');
+});
 app.get('/register', (req, resp) => {
-    resp.render('register')
-})
+    resp.render('register');
+});
 
 
 app.post('/login', async (req, resp) => {
-    const { loginId, password } = req.body
+    const { loginId, password } = req.body;
     console.log(loginId, password);
 
     let user;
 
     if (validator.isEmail(loginId)) {
         // loginId is email
-        user = await UserModel.findOne({ email: loginId })
+        user = await UserModel.findOne({ email: loginId });
     } else {
         //loginId is userName
-        user = await UserModel.findOne({ userName: loginId })
+        user = await UserModel.findOne({ userName: loginId });
 
         // user not found
 
@@ -85,10 +86,10 @@ app.post('/login', async (req, resp) => {
                 status: 401,
                 message: "Data not found",
                 data: req.body
-            })
+            });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password)
+        const isMatch = await bcrypt.compare(password, user.password);
 
 
         if (!isMatch) {
@@ -96,13 +97,13 @@ app.post('/login', async (req, resp) => {
                 status: 401,
                 message: "Wrong password",
                 data: req.body
-            })
+            });
         }
 
 
         req.session.isAuth = true;
-        req.session.user = { email: user.email, userName: user.userName }
-        return resp.redirect('/home')
+        req.session.user = { email: user.email, userName: user.userName };
+        return resp.redirect('/home');
 
         // return resp.send({
         //     status: 200,
@@ -115,46 +116,46 @@ app.post('/login', async (req, resp) => {
         // })
     }
     try {
-        await cleanUpAndValidate({ name, email, password, userName })
+        await cleanUpAndValidate({ name, email, password, userName });
     } catch (error) {
-        return resp.send({ status: 400, message: "invalid data", data: error })
+        return resp.send({ status: 400, message: "invalid data", data: error });
     }
-})
+});
 
 
 
 app.get('/home', (req, resp) => {
 
     if (req.session.isAuth) {
-        return resp.render('home')
+        return resp.render('home');
     } else {
-        return resp.send('Invalid session')
+        return resp.send('Invalid session');
     }
-})
+});
 
 app.post('/logout', (req, resp) => {
     req.session.destroy((err) => {
-        if (err) throw err
+        if (err) throw err;
         resp.redirect('/login');
-    })
-})
+    });
+});
 app.post('/logout_from_all', async (req, resp) => {
 
-    const store = req.sessionStore.destroy({ email: req.session.user.email })
+    const store = req.sessionStore.destroy({ email: req.session.user.email });
 
-    console.log(store)
-    resp.send('hello')
-})
+    console.log(store);
+    resp.send('hello');
+});
 
 
 
 app.post('/register', async (req, resp) => {
-    const { name, email, password, userName } = req.body
+    const { name, email, password, userName } = req.body;
     console.log(req.body);
     try {
-        await cleanUpAndValidate({ name, email, password, userName })
+        await cleanUpAndValidate({ name, email, password, userName });
     } catch (error) {
-        return resp.send({ status: 400, message: "invalid data", data: error })
+        return resp.send({ status: 400, message: "invalid data", data: error });
     }
 
     // check if user already exist
@@ -166,30 +167,30 @@ app.post('/register', async (req, resp) => {
             return resp.send({
                 status: "400",
                 message: "userName already exist",
-            })
+            });
         }
         if (emailId) {
             return resp.send({
                 status: "400",
                 message: "email already exist",
-            })
+            });
         }
     } catch (error) {
         return resp.send({
             status: "400",
             message: "Database error",
             data: error
-        })
+        });
     }
 
     // password encryption
-    const hashedPassword = await bcrypt.hash(password, 13)
+    const hashedPassword = await bcrypt.hash(password, 13);
 
     //  store the data in data base
 
     const user = new UserModel({
         name, email, userName, password: hashedPassword
-    })
+    });
 
     try {
         const res = await user.save();
@@ -198,50 +199,58 @@ app.post('/register', async (req, resp) => {
             status: 200,
             message: "registered successfully!",
             data: res
-        })
+        });
     } catch (error) {
         return resp.send({
             status: 400,
             message: "error",
             data: error
-        })
+        });
     }
 
-})
+});
 
 // todo app api's
 
 function isAuth(req, resp, next) {
-    if (req.session.isAuth) next()
-    else resp.redirect('/login')
+    if (req.session.isAuth) next();
+    else return resp.send({
+        status: 400,
+        message: "Invalid session please login!"
+    });
 }
 
 app.get('/dashboard', isAuth, async (req, resp) => {
 
-    let todos = []
-    try {
-        todos = await TodoModel.find()
+    // let todos = [];
+    // try {
+    //     todos = await TodoModel.find();
+    // } catch (err) {
+    //     return resp.send({
+    //         status: 400,
+    //         message: "error",
+    //     });
+    // }
 
-        console.log('todos', todos[0].todo)
-    } catch (err) {
-        return resp.send({
-            status: 400,
-            message: "error",
-        })
-    }
-
-    return resp.render('dashboard', { todos: todos })
-})
+    return resp.render('dashboard');
+});
 
 app.post('/create-item', isAuth, async (req, resp) => {
 
-    const { todo } = req.body
+    const { todo } = req.body;
 
-    if (todo.length > 100) {
-        return resp.send({ status: 400, message: 'todo too long allowed character length is 100', data: req.body.todo })
+    if (!todo) {
+        return resp.send({
+            status: 404,
+            missing: "Missing parameters!"
+        });
     }
 
-    const user = new TodoModel({ todo, userName: req.session.user.userName })
+    if (todo.length > 100) {
+        return resp.send({ status: 400, message: 'todo too long allowed character length is 100', data: req.body.todo });
+    }
+
+    const user = new TodoModel({ todo, userName: req.session.user.userName });
     try {
         const todoDb = await user.save();
 
@@ -249,18 +258,131 @@ app.post('/create-item', isAuth, async (req, resp) => {
             status: 200,
             message: "item added successfully",
             data: todoDb
-        })
+        });
     } catch (error) {
         return resp.send({
             status: 400,
             message: "error",
             data: error
-        })
+        });
     }
-})
+});
+
+app.post('/edit-item', async (req, resp) => {
+
+    const { id, newData } = req.body;
+
+    if (!id || !newData) {
+        return resp.send({
+            status: 404,
+            missing: "Missing parameters!"
+        });
+    }
+
+    try {
+        const todo = await TodoModel.findOneAndUpdate({ _id: id }, { todo: newData.todo });
+
+        return resp.send({
+            status: 200,
+            message: "updated successfully!",
+            data: todo
+        });
+
+    } catch (err) {
+        return resp.send({
+            status: 400,
+            message: 'error',
+            data: err
+        });
+    }
+});
+
+app.delete('/delete-item/:id', async (req, resp) => {
+    const { id } = req.params;
+
+
+    if (!id) {
+        return resp.send({
+            status: 404,
+            missing: "Missing parameters!"
+        });
+    }
+
+    try {
+        const todo = await TodoModel.findOneAndDelete({ _id: id });
+
+        return resp.send({
+            status: 200,
+            message: "deleted successfully!",
+            data: todo
+        });
+
+    } catch (err) {
+        return resp.send({
+            status: 400,
+            message: 'error',
+            data: err
+        });
+    }
+});
+
+app.post('/pagination-dashboard', isAuth, async (req, resp) => {
+
+    const skip = req.query.skip || 0;
+    console.log('skip', skip);
+    const LIMIT = 5;
+    const userName = req.session.user.userName;
+
+    try {
+        // Read  the first 5
+
+        //perform multiple actions in mongodb querry is called as aggregation :)
+
+        let todos = await TodoModel.aggregate([
+            { $match: { userName: userName } }, { $sort: { todo: -1 } }, { $facet: { data: [{ $skip: parseInt(skip) }, { $limit: LIMIT }] } }
+        ]);
+
+        resp.send({
+            status: 200,
+            message: "Read successfull!",
+            data: todos
+        });
+    } catch (err) {
+        resp.send({
+            status: 400,
+            message: 'database error please try again',
+            data: { err: err, todos: todos }
+        });
+    }
+});
+
+app.post('/logout_from_all_devices', isAuth, async (req, resp) => {
+    const userName = req.session.user.userName;
+
+    const Schema = mongoose.Schema;
+
+    const sessionSchema = new Schema({ _id: String }, { strict: false });
+
+    const sessionModel = mongoose.model('mySession', sessionSchema, 'mySession');
+
+    try {
+        const sessionDb = await sessionModel.deleteMany({ 'session.user.userName': userName });
+        resp.send({
+            status: 200,
+            message: "logout successfull",
+            data: sessionDb
+        });
+    } catch (err) {
+        resp.send({
+            status: 400,
+            message: "database error",
+            data: err
+        });
+    }
+});
 
 app.listen(PORT, () => {
-    console.log(`listening on port ${PORT}`)
+    console.log(`listening on port ${PORT}`);
 })
 
 
